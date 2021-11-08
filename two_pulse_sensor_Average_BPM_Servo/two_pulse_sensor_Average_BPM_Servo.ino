@@ -1,5 +1,5 @@
 #include "Servo.h"
-#testing change 
+
 Servo servoMotor;   
 int servoPin = 3;
 int servoAngle_0;
@@ -9,7 +9,7 @@ int Signal0;
 int Signal1;                
 int Threshold = 550;           
 
-const byte RATE_SIZE = 4; 
+const byte RATE_SIZE = 8; 
 
 byte rates_0[RATE_SIZE]; 
 byte rateSpot_0 = 0;
@@ -97,8 +97,8 @@ void loop() {
 //  Serial.print(",");
 //  Serial.println(beatAvg_1);
 
-  Serial.print(Signal0);
+  Serial.print(beatAvg_0);
   Serial.print(",");
-  Serial.println(Signal1);
+  Serial.println(beatAvg_1);
 
 }
