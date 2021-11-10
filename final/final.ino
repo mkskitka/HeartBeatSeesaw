@@ -1,48 +1,23 @@
 #include "Servo.h"
+#include "gamestate.h"
+#include "pulseSensor.h"
+#include "servoMotor.h"
 
-#define USE_ARDUINO_INTERRUPTS true
-#include <PulseSensorPlayground.h>
-
-#include "cppQueue.h"
-#define  IMPLEMENTATION  FIFO
-
-const int pulseReadingWindow = 20;
-int deltaSum = 0;
-cppQueue  q(sizeof(int), pulseReadingWindow, IMPLEMENTATION, true); // Instantiate queue
-
-const int OUTPUT_TYPE = SERIAL_PLOTTER;
-
-const int PULSE_SENSOR_COUNT = 2;
-byte myBPM[2];
-int deltaBPM;
-
-const int PULSE_INPUT0 = A0;
-const int PULSE_INPUT1 = A1;
-const int PULSE_BLINK1 = 3;
-const int PULSE_FADE1 = 2;
-
-int pulseDifference[pulseReadingWindow];
-bool calibrated = true;
-
-const int THRESHOLD = 550;   // Adjust this number to avoid noise when idle
-
-Servo servoMotor;
-const int servoPin = 3;
-int servoAngle = 90;
-
-PulseSensorPlayground pulseSensor(PULSE_SENSOR_COUNT);
+int magnetState = HIGH;
+const bool printSerialForP5 = false;
+int winningDiff = 20;
+int winningPlayer = -1;
+int maxVariance = 20;
 
 void setup() {
-
   Serial.begin(250000);
-
+  //Serial.begin(9600);
+  Serial.println("setup!");
+  pinMode(electroPin, OUTPUT);
   servoMotor.attach(servoPin);
-  servoMotor.write(servoAngle);
 
   pulseSensor.analogInput(PULSE_INPUT0, 0);
   pulseSensor.analogInput(PULSE_INPUT1, 1);
-
-  pulseSensor.setOutputType(OUTPUT_TYPE);
   pulseSensor.setThreshold(THRESHOLD);
 
   // Now that everything is ready, start reading the PulseSensor signal.
@@ -57,55 +32,80 @@ void setup() {
 void loop() {
 
   delay(20);
+  digitalWrite(electroPin, magnetState);
 
-  // write the latest sample to Serial. (raw data)
-  // pulseSensor.outputSample();
+  int bpm = pulseSensor.getBeatsPerMinute(0);
+  bpmWindow[0].push(&bpm);
 
-  for (int i = 0; i < PULSE_SENSOR_COUNT; ++i) {
-    myBPM [i] = pulseSensor.getBeatsPerMinute(i);
+  bpm = pulseSensor.getBeatsPerMinute(1);
+  bpmWindow[1].push(&bpm);
 
-    deltaBPM = myBPM[0] - myBPM[1];
+  int avgBPM0 = avgBPM(&bpmWindow[0]);
+  int avgBPM1 = avgBPM(&bpmWindow[0]);
 
-    // printing raw data do the serial plotter
-    // pulseSensor.outputBeat(i);
-
-        //A0 - BPM
-        Serial.print(myBPM[0]);
-        Serial.print(",");
-        //A1 - BPM
-        Serial.print(myBPM[1]);
-        Serial.print(",");
-        // Difference B/W A0 and A1 BPM
-        Serial.println(deltaBPM);
+  if (GAME_SEQUENCE[STATE_IDX] == GAME_ACTIVE) {
+    servoMotor.write(avgBPM0 - avgBPM1);
   }
-  if (calibrated) {
-    if (q.isFull()) {
-      int ref;
-      q.peekIdx(&ref, pulseReadingWindow - 1);
-      //      Serial.println(String(ref));
-      deltaSum = deltaSum - ref;
+
+  if (GAME_SEQUENCE[STATE_IDX] == START && avgBPM0 > 20 && avgBPM1 > 20 ) {
+    STATE_IDX++;
+  }
+  if (GAME_SEQUENCE[STATE_IDX] == CALIBRATE && isCalibrated(&bpmWindow[0]) && isCalibrated(&bpmWindow[1])) {
+      BASE_RATE[0] = avgBPM0;
+      BASE_RATE[1] = avgBPM1;
+      STATE_IDX++;
+  }
+  if (GAME_SEQUENCE[STATE_IDX] == GAME_ACTIVE && abs(avgBPM0 - avgBPM1) > winningDiff) {
+    STATE_IDX++;
+    int magnetState = LOW; //release ball!
+    if (avgBPM0  < avgBPM1) {
+      winningPlayer = 0;
     }
-    q.push(&deltaBPM);
-    deltaSum = deltaSum + deltaBPM;
-    //    Serial.println(deltaSum);
-    if (q.isFull()) {
-      //Serial.println("q count: " + String(q.getCount()));
-      int avg_delta = deltaSum / q.getCount();
-      //Serial.println(avg_delta);
-//      moveServo(avg_delta);
+    else {
+      winningPlayer = 1;
+    }
+  }
+  if (printSerialForP5) {
+    Serial.print(GAME_SEQUENCE[STATE_IDX] + ",");
+    if (GAME_SEQUENCE[STATE_IDX] == GAME_OVER) {
+      Serial.println(winningPlayer);
+    }
+    else {
+      Serial.print(avgBPM0 + ",");
+      Serial.println(avgBPM1);
     }
   }
 }
 
+int avgBPM(cppQueue &q) {
+  int sum = 0;
+  for (int i = 0; i < q.getCount(); i++) {
+    int ref;
+    q.peekIdx(&ref, i);
+    sum += ref;
+  }
+  return sum / q.getCount();
+}
 
-void moveServo(int value) {
-  if (value < -25) {
-    value = -25;
+
+bool isCalibrated(cppQueue &q) {
+  if (!q.isFull()) {
+    return false;
   }
-  if (value > 25) {
-    value = 25;
+  int min = 1000;
+  int max = 0;
+  for (int i = 0; i < q.getCount(); i++) {
+    int ref;
+    q.peekIdx(&ref, i);
+    if (ref < min) {
+      min = ref;
+    }
+    if (ref > max) {
+      max = ref;
+    }
   }
-  servoAngle = map(value, -25, 25, 88, 92);
-  Serial.println("servoAngle " + String(servoAngle));
-//  servoMotor.write(servoAngle);
+  if (max - min < maxVariance) {
+    return true;
+  }
+  return false;
 }
