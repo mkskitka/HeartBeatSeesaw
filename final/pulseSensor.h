@@ -1,7 +1,7 @@
 
 #include "cppQueue.h"
 // interupts increase the accuracy of the pulse sensor measure
-#define USE_ARDUINO_INTERRUPTS true
+#define USE_ARDUINO_INTERRUPTS false
 #include <PulseSensorPlayground.h>
 // First In First Out (FIFO) Queue used to average bpm over a window of time
 #define  IMPLEMENTATION  FIFO
@@ -24,3 +24,6 @@ const int THRESHOLD = 550;   // Adjust this number to avoid noise when idle
 
 const int PULSE_INPUT0 = A0;
 const int PULSE_INPUT1 = A1;
+
+int avgBPM0; 
+int avgBPM1; 
