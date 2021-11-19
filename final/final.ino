@@ -1,10 +1,13 @@
-#include "Servo.h"
-#include "gamestate.h"
-#include "pulseSensor.h"
+// Servo Motor imports and variables 
 #include "servoMotor.h"
+// State Variables 
+#include "gamestate.h"
+// Pulse Sensor imports and variables
+#include "pulseSensor.h"
 
+// HIGH = ON, LOW = OFF
 int magnetState = HIGH;
-const bool printSerialForP5 = false;
+const bool printSerialForP5 = true;
 int winningDiff = 20;
 int winningPlayer = -1;
 int maxVariance = 20;
@@ -38,7 +41,7 @@ void loop() {
 
     int reading0 = pulseSensor.getBeatsPerMinute(0);
     int reading1 = pulseSensor.getBeatsPerMinute(1);
-    Serial.println("reading 0: " + String(reading0) + " reading 1: " + String(reading1));
+//    Serial.println("reading 0: " + String(reading0) + " reading 1: " + String(reading1));
 
     q0.push(&reading0);
     q1.push(&reading1); 
@@ -85,6 +88,7 @@ void loop() {
       Serial.print(String(avgBPM0) + ",");
       //Serial.print("BPM1: ");
       Serial.println(String(avgBPM1));
+      Serial.print("Player0 Delta BPM" + "," + "Player1 Delta BPM");
     }
   }
 }

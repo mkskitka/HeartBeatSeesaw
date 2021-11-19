@@ -1,6 +1,8 @@
 
 int STATE_IDX = 0; 
+// Opening Animation 
 const String START = "start";
+// Calibrate P5 Screen 
 const String CALIBRATE = "calibrate"; 
 const String GAME_ACTIVE = "game active";
 const String GAME_OVER = "game over";
