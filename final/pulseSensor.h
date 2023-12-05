@@ -6,7 +6,7 @@
 // First In First Out (FIFO) Queue used to average bpm over a window of time
 #define  IMPLEMENTATION  FIFO
 //pulse reading window is the window size to average bpm values over (creates smoother curve)
-const int pulseReadingWindow = 20;
+const int pulseReadingWindow = 40;
 int deltaSum = 0;
 
 // BPM window for A0
